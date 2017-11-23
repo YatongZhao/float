@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            background-color: lightgray;
+        }
+    </style>
+<body>
+    <canvas></canvas>
+</body>
+<script>
+    var myCanvas = document.querySelector('canvas');
+    var ctx = myCanvas.getContext('2d');
+    ctx.canvas.width = document.documentElement.clientWidth;
+    ctx.canvas.height = document.documentElement.clientHeight;
+
+
+    function Chessboard(ctx) {
+        this.ctx = ctx;
+        this.canvasWidth = this.ctx.canvas.width;
+        this.canvasHeight = this.ctx.canvas.height;
+
+        this.G = .01;
+        this.G2 = 1;
+
+        this.dotList = [];
+
+        this.timer = null;
+
+        this.turbo = false;
+
+        this.centerX = this.canvasWidth / 2;
+        this.centerY = this.canvasHeight / 2;
+        this.lastCenterX = this.centerX;
+        this.lastCenterY = this.centerY;
+
+        this.maxSpeed = 140;
+        this.renderMaxSpeed = this.maxSpeed;
+        this.moveSpeed = 10000;
+
+        this.mouseX = 0;
+        this.mouseY = 0;
+    }
+
+    Chessboard.prototype.init = function () {
+        this.timer = setInterval(this.render.bind(this), 2);
+    }
+
+    Chessboard.prototype.F = function (dot) {
+        // return {
+        //     x: (this.G / Math.pow((dot.x) / 10, 3) - this.G / Math.pow((this.canvasWidth - dot.x) / 10, 3)),
+        //     y: (this.G / Math.pow((dot.y) / 10, 3) - this.G / Math.pow((this.canvasHeight - dot.y) / 10, 3))
+        // }
+        var obj = {x:0, y:0};
+        // if (dot.x < this.canvasWidth * 0.1 || dot.x > this.canvasWidth * 0.9) {
+            // obj.x = -Math.pow((dot.x - this.centerX), 5) / 5000000000
+            // obj.x = -Math.pow((dot.x - this.centerX), 5) / 500000
+            obj.x = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2), .5), 4) * (dot.x - this.centerX) / 50000000
+        // }
+        // if (dot.y < this.canvasHeight * 0.1 || dot.y > this.canvasHeight * 0.9) {
+            // obj.y = -Math.pow((dot.y - this.centerY), 5) / 500000
+            obj.y = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2), .5), 4) * (dot.y - this.centerY) / 50000000
+        // }
+        return obj;
+    }
+
+    Chessboard.prototype.render = function () {
+        var dotList = this.dotList;
+        // TODO:
+
+        if (
+            !(this.lastCenterX == this.centerX && this.lastCenterY == this.centerY) ||
+            this.turbo == true
+        ) {
+            this.renderMaxSpeed = this.moveSpeed;
+        } else {
+            if (this.renderMaxSpeed > this.maxSpeed) {
+                this.renderMaxSpeed *= 0.995;
+            } else {
+                this.renderMaxSpeed = this.maxSpeed;
+            }
+        }
+
+        this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+        if (this.turbo) this.getMouseLine(this.centerX, this.centerY);
+        // this.getMouseLine(this.centerX, this.centerY);
+
+        for (var i = 0; i < dotList.length; i++) {
+
+            // 1. 先由x,y vx,vy计算出新的坐标
+            dotList[i].x += dotList[i].vx / 1000;
+            dotList[i].y += dotList[i].vy / 1000;
+
+            // 2. 由新坐标计算出新Fx,Fy
+            dotList[i].Fx += this.F(dotList[i]).x;
+            dotList[i].Fy += this.F(dotList[i]).y;
+
+            for (var j = i + 1; j < dotList.length; j++) {
+                Gx2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].x - dotList[i].x) /
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 1.5) + 100);
+                Gy2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].y - dotList[i].y) /
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 1.5) + 100);
+
+                    // F = G2 * m1 * m2 / R ^ 2 * m1 * m2 / R
+                    // R0 = G2 / G1 * m1 * m2
+                Gx3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].x - dotList[i].x) /
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 2) + 100);
+                Gy3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].y - dotList[i].y) /
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 2) + 100);
+                dotList[i].Fx += Gx2 + Gx3;
+                dotList[i].Fy += Gy2 + Gy3;
+                dotList[j].Fx -= Gx2 + Gx3;
+                dotList[j].Fy -= Gy2 + Gy3;
+                
+                if (
+                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) > 18000 &&
+                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) < 60000 
+                    // this.renderMaxSpeed == this.maxSpeed
+                ) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(dotList[i].x, dotList[i].y);
+                    this.ctx.lineTo(dotList[j].x, dotList[j].y);
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                    this.ctx.stroke();
+                } 
+            }
+
+            // 3. 由新Fx,Fy计算出新vx,vy
+            dotList[i].vx += dotList[i].Fx / dotList[i].m;
+            dotList[i].vy += dotList[i].Fy / dotList[i].m;
+
+            // if (this.turbo) {
+            //     dotList[i].vx *= .85;
+            //     dotList[i].vy *= .85;
+            // }
+
+            if (dotList[i].vx >= this.renderMaxSpeed) dotList[i].vx = this.renderMaxSpeed;
+            if (dotList[i].vx <= -this.renderMaxSpeed) dotList[i].vx = -this.renderMaxSpeed;
+            if (dotList[i].vy >= this.renderMaxSpeed) dotList[i].vy = this.renderMaxSpeed;
+            if (dotList[i].vy <= -this.renderMaxSpeed) dotList[i].vy = -this.renderMaxSpeed;
+
+            dotList[i].Fx = 0;
+            dotList[i].Fy = 0;
+            // 4. 渲染图形
+            this.ctx.beginPath();
+            this.ctx.moveTo(dotList[i].x, dotList[i].y);
+            // this.ctx.arc(dotList[i].x, dotList[i].y, dotList[i].m / 10, 0, 2 * Math.PI);
+            this.ctx.arc(dotList[i].x, dotList[i].y, 3, 0, 2 * Math.PI);
+            this.ctx.fillStyle = 'rgba(0,0,0,.3)';
+            this.ctx.fill();
+
+            this.lastCenterX = this.centerX;
+            this.lastCenterY = this.centerY;
+        }
+    }
+
+    Chessboard.prototype.getMouseLine = function (mouseX, mouseY) {
+        this.ctx.beginPath();
+        for (var i = 0; i < this.dotList.length; i++) {
+            this.ctx.moveTo(mouseX, mouseY);
+            this.ctx.lineTo(this.dotList[i].x, this.dotList[i].y);
+            this.ctx.strokeStyle = 'rgba(0, 0, 0, .05)';
+            this.ctx.stroke();
+        }
+    }
+
+    function Dot(x, y, m) {
+        this.x = x || 1;
+        this.y = y || 1;
+
+        this.vx = 0;
+        this.vy = 0;
+
+        this.Fx = 0;
+        this.Fy = 0;
+
+        this.m = m || 10;
+    }
+
+    var chessboard = new Chessboard(ctx);
+
+    for (var i = 0; i < 30; i++) {
+        chessboard.dotList.push(new Dot(311 + i * 3, 113 + i * 2, 80));
+    }
+
+    chessboard.init();
+
+    var timer = null;
+    myCanvas.addEventListener('mousedown', function (e) {
+        chessboard.turbo = true;
+        chessboard.centerX = e.clientX;
+        chessboard.centerY = e.clientY;
+
+        // clearTimeout(timer);
+        // timer = setTimeout(function () {
+        //     chessboard.turbo = false;
+        // },1200);
+
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (chessboard.turbo == false) return;
+        chessboard.centerX = e.clientX;
+        chessboard.centerY = e.clientY;
+
+    });
+    myCanvas.addEventListener('mouseup', function () {
+        chessboard.turbo = false;
+        chessboard.callback = null;
+    })
+</script>
+
+</html>

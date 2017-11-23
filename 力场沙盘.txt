@@ -1,0 +1,34 @@
+原理: F = ma
+
+引力: F = G1 * m1 * m2 / R ^ 2
+
+斥力: F = G2 * m1 * m2 / R ^ 2 * m1 * m2 / R
+
+R0 = G2 / G1 * m1 * m2
+
+render过程: 位置-->力-->加速度-->速度
+
+
+
+Normalize.css 和 reset css
+相同点: 让浏览器表现一致
+区别: 
+    ul ----> list-style: none    reset css
+    ul ----> 默认                Normalize.css
+reset css 为了表现一致, 强制更改样式
+Normalize 为了表现一致, 本身是一致的就不会去更改
+
+
+col-*-*
+第一个※: 在什么设备范围内生效
+超小屏  xs
+小屏    sm
+中屏    md   在中屏以上生效, 包含自己
+大屏    lg
+第二个※: 占多少份
+默认会把一行分成12等分
+
+col-*-pull-2 往右定位2等分
+col-*-push-3 往左定位3等分
+
+col-*-offset-3
