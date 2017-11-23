@@ -7,15 +7,17 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
 </head>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-        }
-        canvas {
-            background-color: lightgray;
-        }
-    </style>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    canvas {
+        background-color: lightgray;
+    }
+</style>
+
 <body>
     <canvas></canvas>
 </body>
@@ -42,10 +44,12 @@
 
         this.centerX = this.canvasWidth / 2;
         this.centerY = this.canvasHeight / 2;
+        this.centerZ = 0;
         this.lastCenterX = this.centerX;
         this.lastCenterY = this.centerY;
+        this.lastCenterZ = this.centerZ;
 
-        this.maxSpeed = 140;
+        this.maxSpeed = 10;
         this.renderMaxSpeed = this.maxSpeed;
         this.moveSpeed = 10000;
 
@@ -54,7 +58,14 @@
     }
 
     Chessboard.prototype.init = function () {
-        this.timer = setInterval(this.render.bind(this), 2);
+        // this.timer = setInterval(this.render.bind(this), 2);
+        var that = this;
+        this.timer = setTimeout(go, 1);
+        function go() {
+            that.render.call(that);
+            clearTimeout(that.timer);
+            that.timer = setTimeout(go, 1);
+        }
     }
 
     Chessboard.prototype.F = function (dot) {
@@ -62,15 +73,21 @@
         //     x: (this.G / Math.pow((dot.x) / 10, 3) - this.G / Math.pow((this.canvasWidth - dot.x) / 10, 3)),
         //     y: (this.G / Math.pow((dot.y) / 10, 3) - this.G / Math.pow((this.canvasHeight - dot.y) / 10, 3))
         // }
-        var obj = {x:0, y:0};
+        var obj = { x: 0, y: 0, z: 0 };
         // if (dot.x < this.canvasWidth * 0.1 || dot.x > this.canvasWidth * 0.9) {
-            // obj.x = -Math.pow((dot.x - this.centerX), 5) / 5000000000
-            // obj.x = -Math.pow((dot.x - this.centerX), 5) / 500000
-            obj.x = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2), .5), 4) * (dot.x - this.centerX) / 50000000
+        // obj.x = -Math.pow((dot.x - this.centerX), 5) / 5000000000
+        // obj.x = -Math.pow((dot.x - this.centerX), 5) / 500000
+        obj.x = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.x - this.centerX) / 5000000
         // }
         // if (dot.y < this.canvasHeight * 0.1 || dot.y > this.canvasHeight * 0.9) {
-            // obj.y = -Math.pow((dot.y - this.centerY), 5) / 500000
-            obj.y = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2), .5), 4) * (dot.y - this.centerY) / 50000000
+        // obj.y = -Math.pow((dot.y - this.centerY), 5) / 500000
+        obj.y = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.y - this.centerY) / 5000000
+        // }
+        obj.z = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.z - this.centerZ) / 5000000
+        // if (Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5) < 200) {
+        //     // obj.x = -1 / obj.x;
+        //     // obj.y = -1 / obj.y;
+        //     // obj.z = -1 / obj.z
         // }
         return obj;
     }
@@ -80,7 +97,7 @@
         // TODO:
 
         if (
-            !(this.lastCenterX == this.centerX && this.lastCenterY == this.centerY) ||
+            !(this.lastCenterX == this.centerX && this.lastCenterY == this.centerY && this.lastCenterZ == this.centerZ) ||
             this.turbo == true
         ) {
             this.renderMaxSpeed = this.moveSpeed;
@@ -102,68 +119,130 @@
             // 1. 先由x,y vx,vy计算出新的坐标
             dotList[i].x += dotList[i].vx / 1000;
             dotList[i].y += dotList[i].vy / 1000;
+            dotList[i].z += dotList[i].vz / 1000;
 
             // 2. 由新坐标计算出新Fx,Fy
             dotList[i].Fx += this.F(dotList[i]).x;
             dotList[i].Fy += this.F(dotList[i]).y;
+            dotList[i].Fz += this.F(dotList[i]).z;
 
             for (var j = i + 1; j < dotList.length; j++) {
                 Gx2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].x - dotList[i].x) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 1.5) + 100);
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 1.5) + 100);
                 Gy2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].y - dotList[i].y) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 1.5) + 100);
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 1.5) + 100);
+                Gz2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].z - dotList[i].z) /
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 1.5) + 100);
 
-                    // F = G2 * m1 * m2 / R ^ 2 * m1 * m2 / R
-                    // R0 = G2 / G1 * m1 * m2
+                // F = G2 * m1 * m2 / R ^ 2 * m1 * m2 / R
+                // R0 = G2 / G1 * m1 * m2
                 Gx3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].x - dotList[i].x) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 2) + 100);
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 2) + 100);
                 Gy3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].y - dotList[i].y) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2)), 2) + 100);
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 2) + 100);
+                Gz3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].z - dotList[i].z) /
+                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 2) + 100);
+
                 dotList[i].Fx += Gx2 + Gx3;
                 dotList[i].Fy += Gy2 + Gy3;
+                dotList[i].Fz += Gz2 + Gz3;
+
                 dotList[j].Fx -= Gx2 + Gx3;
                 dotList[j].Fy -= Gy2 + Gy3;
-                
+                dotList[j].Fz -= Gz2 + Gz3;
+
                 if (
-                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) > 18000 &&
-                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) < 60000 
+                    // Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2) > 18000 &&
+                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2) < 3000
                     // this.renderMaxSpeed == this.maxSpeed
                 ) {
+                    var opacity = dotList[i].z > 0 ? (dotList[i].z) / 150 : 0;
                     this.ctx.beginPath();
                     this.ctx.moveTo(dotList[i].x, dotList[i].y);
                     this.ctx.lineTo(dotList[j].x, dotList[j].y);
                     this.ctx.lineWidth = 1;
-                    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                    // this.ctx.strokeStyle = 'rgba(0, 0, 0, '+opacity+')';
+                    this.ctx.strokeStyle = 'rgba(0, 0, 0, .3)';
                     this.ctx.stroke();
-                } 
+                }
             }
 
             // 3. 由新Fx,Fy计算出新vx,vy
             dotList[i].vx += dotList[i].Fx / dotList[i].m;
             dotList[i].vy += dotList[i].Fy / dotList[i].m;
+            dotList[i].vz += dotList[i].Fz / dotList[i].m;
 
             // if (this.turbo) {
             //     dotList[i].vx *= .85;
             //     dotList[i].vy *= .85;
             // }
 
+            // 衰减径向速度
+            // 求取径向分速度
+            // 速度向量:
+            var XV = [dotList[i].vx, dotList[i].vy, dotList[i].vz];
+            var XR = [
+                dotList[i].x - this.centerX,
+                dotList[i].y - this.centerY,
+                dotList[i].z - this.centerZ
+            ];
+            var cosVR = (dotList[i].vx * (dotList[i].x - this.centerX) +
+                dotList[i].vy * (dotList[i].y - this.centerY) +
+                dotList[i].vz * (dotList[i].z - this.centerZ)) /
+                (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) *
+                    Math.pow(Math.pow(XR[0], 2) + Math.pow(XR[1], 2) + Math.pow(XR[2], 2), .5));
+
+            // console.log(Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5));
+            // console.log(XV);
+            dotList[i].vx +=
+                (dotList[i].x - this.centerX) * .4 /
+                Math.pow(
+                    Math.pow((dotList[i].x - this.centerX), 2) +
+                    Math.pow((dotList[i].y - this.centerY), 2) +
+                    Math.pow((dotList[i].z - this.centerZ), 2), .5) *
+                Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+            dotList[i].vy +=
+                (dotList[i].y - this.centerY) * .4 /
+                Math.pow(
+                    Math.pow((dotList[i].x - this.centerX), 2) +
+                    Math.pow((dotList[i].y - this.centerY), 2) +
+                    Math.pow((dotList[i].z - this.centerZ), 2), .5) *
+                Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+            dotList[i].vz +=
+                (dotList[i].z - this.centerZ) * .4 /
+                Math.pow(
+                    Math.pow((dotList[i].x - this.centerX), 2) +
+                    Math.pow((dotList[i].y - this.centerY), 2) +
+                    Math.pow((dotList[i].z - this.centerZ), 2), .5) *
+                Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+            // dotList[i].vy =
+            // dotList[i].vz =
+
             if (dotList[i].vx >= this.renderMaxSpeed) dotList[i].vx = this.renderMaxSpeed;
             if (dotList[i].vx <= -this.renderMaxSpeed) dotList[i].vx = -this.renderMaxSpeed;
+
             if (dotList[i].vy >= this.renderMaxSpeed) dotList[i].vy = this.renderMaxSpeed;
             if (dotList[i].vy <= -this.renderMaxSpeed) dotList[i].vy = -this.renderMaxSpeed;
 
+            if (dotList[i].vz >= this.renderMaxSpeed) dotList[i].vz = this.renderMaxSpeed;
+            if (dotList[i].vz <= -this.renderMaxSpeed) dotList[i].vz = -this.renderMaxSpeed;
+
             dotList[i].Fx = 0;
             dotList[i].Fy = 0;
+            dotList[i].Fz = 0;
             // 4. 渲染图形
             this.ctx.beginPath();
             this.ctx.moveTo(dotList[i].x, dotList[i].y);
             // this.ctx.arc(dotList[i].x, dotList[i].y, dotList[i].m / 10, 0, 2 * Math.PI);
             this.ctx.arc(dotList[i].x, dotList[i].y, 3, 0, 2 * Math.PI);
+            var opacity = (dotList[i].z + 50) / 100;
+            // this.ctx.fillStyle = 'rgba(0,0,0,' + opacity + ')';
             this.ctx.fillStyle = 'rgba(0,0,0,.3)';
-            // this.ctx.fill();
+            this.ctx.fill();
 
             this.lastCenterX = this.centerX;
             this.lastCenterY = this.centerY;
+            this.lastCenterZ = this.centerZ;
         }
     }
 
@@ -177,27 +256,30 @@
         }
     }
 
-    function Dot(x, y, m, vx, vy) {
+    function Dot(x, y, m, vx, vy, vz, z) {
         this.x = x || 1;
         this.y = y || 1;
+        this.z = z || 0;
 
         this.vx = vx || 0;
         this.vy = vy || 0;
+        this.vz = vz || 0;
 
         this.Fx = 0;
         this.Fy = 0;
+        this.Fz = 0;
 
         this.m = m || 10;
     }
 
     var chessboard = new Chessboard(ctx);
 
-    for (var i = 0; i < 15; i++) {
-        chessboard.dotList.push(new Dot(311, 113, 80, 1000));
+    for (var i = 0; i < 200; i++) {
+        chessboard.dotList.push(new Dot(311, 113, 80, 1000, 20, 200, 1000));
     }
-    for (var i = 0; i < 15; i++) {
-        chessboard.dotList.push(new Dot(311, 113, 80));
-    }
+    // for (var i = 0; i < 50; i++) {
+    //     chessboard.dotList.push(new Dot(311, 113, 80, 1000, 20, -200, -1000));
+    // }
 
     chessboard.init();
 
