@@ -49,9 +49,9 @@
         this.lastCenterY = this.centerY;
         this.lastCenterZ = this.centerZ;
 
-        this.maxSpeed = 10;
+        this.maxSpeed = 140;
         this.renderMaxSpeed = this.maxSpeed;
-        this.moveSpeed = 10000;
+        this.moveSpeed = 80000;
 
         this.mouseX = 0;
         this.mouseY = 0;
@@ -77,13 +77,13 @@
         // if (dot.x < this.canvasWidth * 0.1 || dot.x > this.canvasWidth * 0.9) {
         // obj.x = -Math.pow((dot.x - this.centerX), 5) / 5000000000
         // obj.x = -Math.pow((dot.x - this.centerX), 5) / 500000
-        obj.x = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.x - this.centerX) / 5000000
+        obj.x = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.x - this.centerX) / 500000
         // }
         // if (dot.y < this.canvasHeight * 0.1 || dot.y > this.canvasHeight * 0.9) {
         // obj.y = -Math.pow((dot.y - this.centerY), 5) / 500000
-        obj.y = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.y - this.centerY) / 5000000
+        obj.y = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.y - this.centerY) / 500000
         // }
-        obj.z = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.z - this.centerZ) / 5000000
+        obj.z = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.z - this.centerZ) / 500000
         // if (Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5) < 200) {
         //     // obj.x = -1 / obj.x;
         //     // obj.y = -1 / obj.y;
@@ -103,7 +103,7 @@
             this.renderMaxSpeed = this.moveSpeed;
         } else {
             if (this.renderMaxSpeed > this.maxSpeed) {
-                this.renderMaxSpeed *= 0.995;
+                this.renderMaxSpeed *= 0.967;
             } else {
                 this.renderMaxSpeed = this.maxSpeed;
             }
@@ -153,7 +153,7 @@
 
                 if (
                     // Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2) > 18000 &&
-                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2) < 3000
+                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2) < 2000
                     // this.renderMaxSpeed == this.maxSpeed
                 ) {
                     var opacity = dotList[i].z > 0 ? (dotList[i].z) / 150 : 0;
@@ -162,7 +162,7 @@
                     this.ctx.lineTo(dotList[j].x, dotList[j].y);
                     this.ctx.lineWidth = 1;
                     // this.ctx.strokeStyle = 'rgba(0, 0, 0, '+opacity+')';
-                    this.ctx.strokeStyle = 'rgba(0, 0, 0, .3)';
+                    this.ctx.strokeStyle = 'rgba(0, 0, 0, .1)';
                     this.ctx.stroke();
                 }
             }
@@ -195,37 +195,49 @@
             // console.log(Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5));
             // console.log(XV);
             dotList[i].vx +=
-                (dotList[i].x - this.centerX) * .4 /
+                (dotList[i].x - this.centerX) * .9 /
                 Math.pow(
                     Math.pow((dotList[i].x - this.centerX), 2) +
                     Math.pow((dotList[i].y - this.centerY), 2) +
                     Math.pow((dotList[i].z - this.centerZ), 2), .5) *
                 Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
             dotList[i].vy +=
-                (dotList[i].y - this.centerY) * .4 /
+                (dotList[i].y - this.centerY) * .9 /
                 Math.pow(
                     Math.pow((dotList[i].x - this.centerX), 2) +
                     Math.pow((dotList[i].y - this.centerY), 2) +
                     Math.pow((dotList[i].z - this.centerZ), 2), .5) *
                 Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
             dotList[i].vz +=
-                (dotList[i].z - this.centerZ) * .4 /
+                (dotList[i].z - this.centerZ) * .9 /
                 Math.pow(
                     Math.pow((dotList[i].x - this.centerX), 2) +
                     Math.pow((dotList[i].y - this.centerY), 2) +
                     Math.pow((dotList[i].z - this.centerZ), 2), .5) *
                 Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
-            // dotList[i].vy =
-            // dotList[i].vz =
 
-            if (dotList[i].vx >= this.renderMaxSpeed) dotList[i].vx = this.renderMaxSpeed;
-            if (dotList[i].vx <= -this.renderMaxSpeed) dotList[i].vx = -this.renderMaxSpeed;
+            
+            // 此处算法为最均匀最正确算法, 但是显然效果并没有x, y分开来的好
+            if (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) >= this.renderMaxSpeed) {
+                dotList[i].vx *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].vy *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].vz *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+            }
+            if (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) <= -this.renderMaxSpeed) {
+                dotList[i].vx *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].vy *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].vz *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+            }
 
-            if (dotList[i].vy >= this.renderMaxSpeed) dotList[i].vy = this.renderMaxSpeed;
-            if (dotList[i].vy <= -this.renderMaxSpeed) dotList[i].vy = -this.renderMaxSpeed;
+            // x, y方向最大速度分开计算, 不均匀, 但是效果佳
+            // if (dotList[i].vx >= this.renderMaxSpeed) dotList[i].vx = this.renderMaxSpeed;
+            // if (dotList[i].vx <= -this.renderMaxSpeed) dotList[i].vx = -this.renderMaxSpeed;
 
-            if (dotList[i].vz >= this.renderMaxSpeed) dotList[i].vz = this.renderMaxSpeed;
-            if (dotList[i].vz <= -this.renderMaxSpeed) dotList[i].vz = -this.renderMaxSpeed;
+            // if (dotList[i].vy >= this.renderMaxSpeed) dotList[i].vy = this.renderMaxSpeed;
+            // if (dotList[i].vy <= -this.renderMaxSpeed) dotList[i].vy = -this.renderMaxSpeed;
+
+            // if (dotList[i].vz >= this.renderMaxSpeed) dotList[i].vz = this.renderMaxSpeed;
+            // if (dotList[i].vz <= -this.renderMaxSpeed) dotList[i].vz = -this.renderMaxSpeed;
 
             dotList[i].Fx = 0;
             dotList[i].Fy = 0;
@@ -237,7 +249,7 @@
             this.ctx.arc(dotList[i].x, dotList[i].y, 3, 0, 2 * Math.PI);
             var opacity = (dotList[i].z + 50) / 100;
             // this.ctx.fillStyle = 'rgba(0,0,0,' + opacity + ')';
-            this.ctx.fillStyle = 'rgba(0,0,0,.3)';
+            this.ctx.fillStyle = 'rgba(0,0,0,.1)';
             this.ctx.fill();
 
             this.lastCenterX = this.centerX;
