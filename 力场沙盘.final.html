@@ -33,8 +33,8 @@
         this.canvasWidth = this.ctx.canvas.width;
         this.canvasHeight = this.ctx.canvas.height;
 
-        this.G = .01;
-        this.G2 = 1;
+        this.G = 0.00001;
+        this.G2 = .001;
 
         this.dotList = [];
 
@@ -42,23 +42,33 @@
 
         this.turbo = false;
 
-        this.centerX = this.canvasWidth / 2;
-        this.centerY = this.canvasHeight / 2;
-        this.centerZ = 0;
-        this.lastCenterX = this.centerX;
-        this.lastCenterY = this.centerY;
-        this.lastCenterZ = this.centerZ;
+        this.center = {
+            x: this.canvasWidth / 2,
+            y: this.canvasHeight / 2,
+            z: 0
+        }
+        this.lastCenter = {
+            x: this.center.x,
+            y: this.center.y,
+            z: this.center.z
+        }
 
-        this.maxSpeed = 140;
-        this.renderMaxSpeed = this.maxSpeed;
-        this.moveSpeed = 80000;
+        this.stayMaxSpeed = .040;
+        this.moveMaxSpeed = 80.000;
+        this.moveSpeed = this.stayMaxSpeed;
 
         this.mouseX = 0;
         this.mouseY = 0;
+
+        this.decayRatio = 0.95;
+
+        this.lineLength = {
+            max: 50,
+            min: 0
+        }
     }
 
     Chessboard.prototype.init = function () {
-        // this.timer = setInterval(this.render.bind(this), 2);
         var that = this;
         this.timer = setTimeout(go, 1);
         function go() {
@@ -68,27 +78,11 @@
         }
     }
 
-    Chessboard.prototype.F = function (dot) {
-        // return {
-        //     x: (this.G / Math.pow((dot.x) / 10, 3) - this.G / Math.pow((this.canvasWidth - dot.x) / 10, 3)),
-        //     y: (this.G / Math.pow((dot.y) / 10, 3) - this.G / Math.pow((this.canvasHeight - dot.y) / 10, 3))
-        // }
+    Chessboard.prototype.F = function (dot, R) {
         var obj = { x: 0, y: 0, z: 0 };
-        // if (dot.x < this.canvasWidth * 0.1 || dot.x > this.canvasWidth * 0.9) {
-        // obj.x = -Math.pow((dot.x - this.centerX), 5) / 5000000000
-        // obj.x = -Math.pow((dot.x - this.centerX), 5) / 500000
-        obj.x = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.x - this.centerX) / 500000
-        // }
-        // if (dot.y < this.canvasHeight * 0.1 || dot.y > this.canvasHeight * 0.9) {
-        // obj.y = -Math.pow((dot.y - this.centerY), 5) / 500000
-        obj.y = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.y - this.centerY) / 500000
-        // }
-        obj.z = -Math.pow(Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5), 4) * (dot.z - this.centerZ) / 500000
-        // if (Math.pow(Math.pow((dot.x - this.centerX), 2) + Math.pow((dot.y - this.centerY), 2) + Math.pow((dot.z - this.centerZ), 2), .5) < 200) {
-        //     // obj.x = -1 / obj.x;
-        //     // obj.y = -1 / obj.y;
-        //     // obj.z = -1 / obj.z
-        // }
+        for (var key in obj) {
+            obj[key] = -Math.pow(R, 4) * (dot.coordinate[key] - this.center[key]) / 40000000000;
+        }
         return obj;
     }
 
@@ -96,165 +90,167 @@
         var dotList = this.dotList;
         // TODO:
 
+        // 初始化moveSpeed
         if (
-            !(this.lastCenterX == this.centerX && this.lastCenterY == this.centerY && this.lastCenterZ == this.centerZ) ||
+            !(this.lastCenter.x == this.center.x && 
+              this.lastCenter.y == this.center.y && 
+              this.lastCenter.z == this.center.z) ||
             this.turbo == true
         ) {
-            this.renderMaxSpeed = this.moveSpeed;
+            this.moveSpeed = this.moveMaxSpeed;
         } else {
-            if (this.renderMaxSpeed > this.maxSpeed) {
-                this.renderMaxSpeed *= 0.967;
+
+            if (this.moveSpeed > this.stayMaxSpeed) {
+                this.moveSpeed *= this.decayRatio;
             } else {
-                this.renderMaxSpeed = this.maxSpeed;
+                this.moveSpeed = this.stayMaxSpeed;
             }
         }
 
+        // 重置画布
         this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
 
-        // if (this.turbo) this.getMouseLine(this.centerX, this.centerY);
-        // this.getMouseLine(this.centerX, this.centerY);
+        // if (this.turbo) this.getMouseLine(this.center.x, this.center.y);
+        // this.getMouseLine(this.center.x, this.center.y);
 
         for (var i = 0; i < dotList.length; i++) {
 
+            // 计算出此点距离引力中心点的距离
+            dotList[i].calcR(this.center);
+
             // 1. 先由x,y vx,vy计算出新的坐标
-            dotList[i].x += dotList[i].vx / 1000;
-            dotList[i].y += dotList[i].vy / 1000;
-            dotList[i].z += dotList[i].vz / 1000;
+            dotList[i].coordinate.x = dotList[i].coordinate.x + dotList[i].v.x;
+            dotList[i].coordinate.y = dotList[i].coordinate.y + dotList[i].v.y;
+            dotList[i].coordinate.z = dotList[i].coordinate.z + dotList[i].v.z;
 
             // 2. 由新坐标计算出新Fx,Fy
-            dotList[i].Fx += this.F(dotList[i]).x;
-            dotList[i].Fy += this.F(dotList[i]).y;
-            dotList[i].Fz += this.F(dotList[i]).z;
+            dotList[i].F.x += this.F(dotList[i], dotList[i].R).x;
+            dotList[i].F.y += this.F(dotList[i], dotList[i].R).y;
+            dotList[i].F.z += this.F(dotList[i], dotList[i].R).z;
 
             for (var j = i + 1; j < dotList.length; j++) {
-                Gx2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].x - dotList[i].x) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 1.5) + 100);
-                Gy2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].y - dotList[i].y) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 1.5) + 100);
-                Gz2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].z - dotList[i].z) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 1.5) + 100);
+                Gx2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].coordinate.x - dotList[i].coordinate.x) /
+                    (Math.pow(dotList[i].calcDistance(dotList[j].coordinate), 3) + 100);
+                Gy2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].coordinate.y - dotList[i].coordinate.y) /
+                    (Math.pow(dotList[i].calcDistance(dotList[j].coordinate), 3) + 100);
+                Gz2 = this.G * dotList[i].m * dotList[j].m * (dotList[j].coordinate.z - dotList[i].coordinate.z) /
+                    (Math.pow(dotList[i].calcDistance(dotList[j].coordinate), 3) + 100);
 
                 // F = G2 * m1 * m2 / R ^ 2 * m1 * m2 / R
                 // R0 = G2 / G1 * m1 * m2
-                Gx3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].x - dotList[i].x) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 2) + 100);
-                Gy3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].y - dotList[i].y) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 2) + 100);
-                Gz3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].z - dotList[i].z) /
-                    (Math.pow((Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2)), 2) + 100);
+                Gx3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].coordinate.x - dotList[i].coordinate.x) /
+                    (Math.pow(dotList[i].calcDistance(dotList[j].coordinate), 4) + 100);
+                Gy3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].coordinate.y - dotList[i].coordinate.y) /
+                    (Math.pow(dotList[i].calcDistance(dotList[j].coordinate), 4) + 100);
+                Gz3 = -this.G2 * Math.pow((dotList[i].m * dotList[j].m), 2) * (dotList[j].coordinate.z - dotList[i].coordinate.z) /
+                    (Math.pow(dotList[i].calcDistance(dotList[j].coordinate), 4) + 100);
 
-                dotList[i].Fx += Gx2 + Gx3;
-                dotList[i].Fy += Gy2 + Gy3;
-                dotList[i].Fz += Gz2 + Gz3;
+                dotList[i].F.x += (Gx2 + Gx3);
+                dotList[i].F.y += (Gy2 + Gy3);
+                dotList[i].F.z += (Gz2 + Gz3);
 
-                dotList[j].Fx -= Gx2 + Gx3;
-                dotList[j].Fy -= Gy2 + Gy3;
-                dotList[j].Fz -= Gz2 + Gz3;
+                dotList[j].F.x -= (Gx2 + Gx3);
+                dotList[j].F.y -= (Gy2 + Gy3);
+                dotList[j].F.z -= (Gz2 + Gz3);
 
                 if (
-                    // Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2) > 18000 &&
-                    Math.pow((dotList[j].x - dotList[i].x), 2) + Math.pow((dotList[j].y - dotList[i].y), 2) + Math.pow((dotList[j].z - dotList[i].z), 2) < 2000
-                    // this.renderMaxSpeed == this.maxSpeed
+                    // Math.pow((dotList[j].coordinate.x - dotList[i].coordinate.x), 2) + Math.pow((dotList[j].coordinate.y - dotList[i].coordinate.y), 2) + Math.pow((dotList[j].coordinate.z - dotList[i].coordinate.z), 2) > 18000 &&
+                    dotList[i].calcDistance(dotList[j].coordinate) < this.lineLength.max
+                    // this.moveSpeed == this.stayMaxSpeed
                 ) {
-                    var opacity = dotList[i].z > 0 ? (dotList[i].z) / 150 : 0;
                     this.ctx.beginPath();
-                    this.ctx.moveTo(dotList[i].x, dotList[i].y);
-                    this.ctx.lineTo(dotList[j].x, dotList[j].y);
+                    this.ctx.moveTo(dotList[i].coordinate.x, dotList[i].coordinate.y);
+                    this.ctx.lineTo(dotList[j].coordinate.x, dotList[j].coordinate.y);
                     this.ctx.lineWidth = 1;
-                    // this.ctx.strokeStyle = 'rgba(0, 0, 0, '+opacity+')';
-                    this.ctx.strokeStyle = 'rgba(0, 0, 0, .1)';
+                    this.ctx.strokeStyle = 'rgba(0, 0, 0, .5)';
                     this.ctx.stroke();
                 }
             }
 
             // 3. 由新Fx,Fy计算出新vx,vy
-            dotList[i].vx += dotList[i].Fx / dotList[i].m;
-            dotList[i].vy += dotList[i].Fy / dotList[i].m;
-            dotList[i].vz += dotList[i].Fz / dotList[i].m;
+            dotList[i].v.x += dotList[i].F.x / (dotList[i].m);
+            dotList[i].v.y += dotList[i].F.y / (dotList[i].m);
+            dotList[i].v.z += dotList[i].F.z / (dotList[i].m);
+
 
             // if (this.turbo) {
-            //     dotList[i].vx *= .85;
-            //     dotList[i].vy *= .85;
+            //     dotList[i].v.x *= .85;
+            //     dotList[i].v.y *= .85;
             // }
 
             // 衰减径向速度
             // 求取径向分速度
             // 速度向量:
-            var XV = [dotList[i].vx, dotList[i].vy, dotList[i].vz];
+            var XV = [dotList[i].v.x, dotList[i].v.y, dotList[i].v.z];
             var XR = [
-                dotList[i].x - this.centerX,
-                dotList[i].y - this.centerY,
-                dotList[i].z - this.centerZ
+                dotList[i].coordinate.x - this.center.x,
+                dotList[i].coordinate.y - this.center.y,
+                dotList[i].coordinate.z - this.center.z
             ];
-            var cosVR = (dotList[i].vx * (dotList[i].x - this.centerX) +
-                dotList[i].vy * (dotList[i].y - this.centerY) +
-                dotList[i].vz * (dotList[i].z - this.centerZ)) /
-                (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) *
-                    Math.pow(Math.pow(XR[0], 2) + Math.pow(XR[1], 2) + Math.pow(XR[2], 2), .5));
+            var cosVR = (dotList[i].v.x * (dotList[i].coordinate.x - this.center.x) +
+                dotList[i].v.y * (dotList[i].coordinate.y - this.center.y) +
+                dotList[i].v.z * (dotList[i].coordinate.z - this.center.z)) /
+                (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) * dotList[i].R);
 
-            // console.log(Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5));
-            // console.log(XV);
-            dotList[i].vx +=
-                (dotList[i].x - this.centerX) * .9 /
-                Math.pow(
-                    Math.pow((dotList[i].x - this.centerX), 2) +
-                    Math.pow((dotList[i].y - this.centerY), 2) +
-                    Math.pow((dotList[i].z - this.centerZ), 2), .5) *
+            dotList[i].v.x +=
+                (dotList[i].coordinate.x - this.center.x) * .5 / dotList[i].R *
                 Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
-            dotList[i].vy +=
-                (dotList[i].y - this.centerY) * .9 /
-                Math.pow(
-                    Math.pow((dotList[i].x - this.centerX), 2) +
-                    Math.pow((dotList[i].y - this.centerY), 2) +
-                    Math.pow((dotList[i].z - this.centerZ), 2), .5) *
+            dotList[i].v.y +=
+                (dotList[i].coordinate.y - this.center.y) * .5 / dotList[i].R *
                 Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
-            dotList[i].vz +=
-                (dotList[i].z - this.centerZ) * .9 /
-                Math.pow(
-                    Math.pow((dotList[i].x - this.centerX), 2) +
-                    Math.pow((dotList[i].y - this.centerY), 2) +
-                    Math.pow((dotList[i].z - this.centerZ), 2), .5) *
+            dotList[i].v.z +=
+                (dotList[i].coordinate.z - this.center.z) * .5 / dotList[i].R *
                 Math.abs(cosVR) * Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
 
+            // dotList[i].v.x -= 
+            // {
+            //     x: dotList[i].coordinate.x - this.center.x,
+            //     y: dotList[i].coordinate.y - this.center.y,
+            //     z: dotList[i].coordinate.z - this.center.z
+            // }
             
             // 此处算法为最均匀最正确算法, 但是显然效果并没有x, y分开来的好
-            if (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) >= this.renderMaxSpeed) {
-                dotList[i].vx *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
-                dotList[i].vy *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
-                dotList[i].vz *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+            if (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) >= this.moveSpeed) {
+                dotList[i].v.x *= this.moveSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].v.y *= this.moveSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].v.z *= this.moveSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
             }
-            if (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) <= -this.renderMaxSpeed) {
-                dotList[i].vx *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
-                dotList[i].vy *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
-                dotList[i].vz *= this.renderMaxSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+            if (Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5) <= -this.moveSpeed) {
+                dotList[i].v.x *= this.moveSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].v.y *= this.moveSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
+                dotList[i].v.z *= this.moveSpeed / Math.pow(Math.pow(XV[0], 2) + Math.pow(XV[1], 2) + Math.pow(XV[2], 2), .5);
             }
 
             // x, y方向最大速度分开计算, 不均匀, 但是效果佳
-            // if (dotList[i].vx >= this.renderMaxSpeed) dotList[i].vx = this.renderMaxSpeed;
-            // if (dotList[i].vx <= -this.renderMaxSpeed) dotList[i].vx = -this.renderMaxSpeed;
+            // if (dotList[i].v.x >= this.moveSpeed) dotList[i].v.x = this.moveSpeed;
+            // if (dotList[i].v.x <= -this.moveSpeed) dotList[i].v.x = -this.moveSpeed;
 
-            // if (dotList[i].vy >= this.renderMaxSpeed) dotList[i].vy = this.renderMaxSpeed;
-            // if (dotList[i].vy <= -this.renderMaxSpeed) dotList[i].vy = -this.renderMaxSpeed;
+            // if (dotList[i].v.y >= this.moveSpeed) dotList[i].v.y = this.moveSpeed;
+            // if (dotList[i].v.y <= -this.moveSpeed) dotList[i].v.y = -this.moveSpeed;
 
-            // if (dotList[i].vz >= this.renderMaxSpeed) dotList[i].vz = this.renderMaxSpeed;
-            // if (dotList[i].vz <= -this.renderMaxSpeed) dotList[i].vz = -this.renderMaxSpeed;
+            // if (dotList[i].v.z >= this.moveSpeed) dotList[i].v.z = this.moveSpeed;
+            // if (dotList[i].v.z <= -this.moveSpeed) dotList[i].v.z = -this.moveSpeed;
 
-            dotList[i].Fx = 0;
-            dotList[i].Fy = 0;
-            dotList[i].Fz = 0;
+            // dotList[i].v.x /= 10;
+            // dotList[i].v.y /= 10;
+            // dotList[i].v.z /= 10;
+
+            // 重置力
+            dotList[i].F.x = 0;
+            dotList[i].F.y = 0;
+            dotList[i].F.z = 0;
+
             // 4. 渲染图形
             this.ctx.beginPath();
-            this.ctx.moveTo(dotList[i].x, dotList[i].y);
-            // this.ctx.arc(dotList[i].x, dotList[i].y, dotList[i].m / 10, 0, 2 * Math.PI);
-            this.ctx.arc(dotList[i].x, dotList[i].y, 3, 0, 2 * Math.PI);
-            var opacity = (dotList[i].z + 50) / 100;
-            // this.ctx.fillStyle = 'rgba(0,0,0,' + opacity + ')';
-            this.ctx.fillStyle = 'rgba(0,0,0,.1)';
+            this.ctx.moveTo(dotList[i].coordinate.x, dotList[i].coordinate.y);
+            // this.ctx.arc(dotList[i].coordinate.x, dotList[i].coordinate.y, dotList[i].m / 10, 0, 2 * Math.PI);
+            this.ctx.arc(dotList[i].coordinate.x, dotList[i].coordinate.y, 3, 0, 2 * Math.PI);
+            this.ctx.fillStyle = 'rgba(0,0,0,.5)';
             this.ctx.fill();
 
-            this.lastCenterX = this.centerX;
-            this.lastCenterY = this.centerY;
-            this.lastCenterZ = this.centerZ;
+            this.lastCenter.x = this.center.x;
+            this.lastCenter.y = this.center.y;
+            this.lastCenter.z = this.center.z;
         }
     }
 
@@ -262,57 +258,74 @@
         this.ctx.beginPath();
         for (var i = 0; i < this.dotList.length; i++) {
             this.ctx.moveTo(mouseX, mouseY);
-            this.ctx.lineTo(this.dotList[i].x, this.dotList[i].y);
+            this.ctx.lineTo(this.dotList[i].coordinate.x, this.dotList[i].coordinate.y);
             this.ctx.strokeStyle = 'rgba(0, 0, 0, .05)';
             this.ctx.stroke();
         }
     }
 
     function Dot(x, y, m, vx, vy, vz, z) {
-        this.x = x || 1;
-        this.y = y || 1;
-        this.z = z || 0;
 
-        this.vx = vx || 0;
-        this.vy = vy || 0;
-        this.vz = vz || 0;
+        // 点的坐标位置
+        this.coordinate = {
+            x: x || 1,
+            y: y || 1,
+            z: z || 0
+        }
 
-        this.Fx = 0;
-        this.Fy = 0;
-        this.Fz = 0;
+        // 点的速度
+        this.v = {
+            x: vx || 0,
+            y: vy || 0,
+            z: vz || 0
+        }
+
+        // 点的受力
+        this.F = {
+            x: 0,
+            y: 0,
+            z: 0
+        }
 
         this.m = m || 10;
+
+        this.R = 0;
+    }
+
+    Dot.prototype.calcR = function (chessboardCenter) {
+        this.R = this.calcDistance(chessboardCenter);
+        return this.R;
+    }
+
+    Dot.prototype.calcDistance = function (coordinate) {
+        return Math.pow(Math.pow((this.coordinate.x - coordinate.x), 2) +
+                        Math.pow((this.coordinate.y - coordinate.y), 2) +
+                        Math.pow((this.coordinate.z - coordinate.z), 2), .5);
     }
 
     var chessboard = new Chessboard(ctx);
 
-    for (var i = 0; i < 200; i++) {
-        chessboard.dotList.push(new Dot(311, 113, 80, 1000, 20, 200, 1000));
+    for (var i = 0; i < 400; i++) {
+        chessboard.dotList.push(new Dot(311, 113, 80, 0, 0, 0, 10));
     }
-    // for (var i = 0; i < 50; i++) {
-    //     chessboard.dotList.push(new Dot(311, 113, 80, 1000, 20, -200, -1000));
+    // for (var i = 0; i < 100; i++) {
+    //     chessboard.dotList.push(new Dot(311, 113, 180, 0, 0, 0, 10));
     // }
 
     chessboard.init();
 
-    var timer = null;
     myCanvas.addEventListener('mousedown', function (e) {
         chessboard.turbo = true;
-        chessboard.centerX = e.clientX;
-        chessboard.centerY = e.clientY;
-
-        // clearTimeout(timer);
-        // timer = setTimeout(function () {
-        //     chessboard.turbo = false;
-        // },1200);
-
+        chessboard.center.x = e.clientX;
+        chessboard.center.y = e.clientY;
     });
+
     document.addEventListener('mousemove', function (e) {
         if (chessboard.turbo == false) return;
-        chessboard.centerX = e.clientX;
-        chessboard.centerY = e.clientY;
-
+        chessboard.center.x = e.clientX;
+        chessboard.center.y = e.clientY;
     });
+
     myCanvas.addEventListener('mouseup', function () {
         chessboard.turbo = false;
         chessboard.callback = null;
